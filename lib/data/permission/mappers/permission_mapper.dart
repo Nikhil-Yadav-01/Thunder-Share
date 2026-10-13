@@ -11,6 +11,26 @@ class PermissionMapper {
         return Permission.microphone;
       case AppPermissionType.location:
         return Permission.location;
+      case AppPermissionType.photos:
+        return Permission.photos;
+      case AppPermissionType.videos:
+        return Permission.videos;
+      case AppPermissionType.mediaLibrary:
+        return Permission.mediaLibrary;
+      case AppPermissionType.audio:
+        return Permission.audio;
+      case AppPermissionType.storage:
+        return Permission.storage;
+      case AppPermissionType.manageExternalStorage:
+        return Permission.manageExternalStorage;
+      case AppPermissionType.appTrackingTransparency:
+        return Permission.appTrackingTransparency;
+      case AppPermissionType.systemAlertWindow:
+        return Permission.systemAlertWindow;
+      case AppPermissionType.requestInstallPackages:
+        return Permission.requestInstallPackages;
+      case AppPermissionType.notification:
+        return Permission.notification;
     }
   }
 
@@ -26,8 +46,9 @@ class PermissionMapper {
         return AppPermissionStatus.restricted;
       case PermissionStatus.limited:
         return AppPermissionStatus.limited;
-      default:
-        return AppPermissionStatus.unknown;
+      case PermissionStatus.provisional:
+        return AppPermissionStatus.provisional;
     }
   }
 }
+
