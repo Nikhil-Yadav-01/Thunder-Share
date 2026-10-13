@@ -8,6 +8,7 @@ class PermissionCard extends StatelessWidget {
   final bool isRequesting;
   final VoidCallback onRequest;
   final VoidCallback? onCheckStatus;
+  final VoidCallback? onOpenDemo;
 
   const PermissionCard({
     super.key,
@@ -16,6 +17,7 @@ class PermissionCard extends StatelessWidget {
     required this.onRequest,
     this.isRequesting = false,
     this.onCheckStatus,
+    this.onOpenDemo,
   });
 
   Color get statusColor {
@@ -187,6 +189,14 @@ class PermissionCard extends StatelessWidget {
                     onPressed: isRequesting ? null : onCheckStatus,
                   ),
                   const SizedBox(width: 4),
+                ],
+                if (onOpenDemo != null) ...[
+                  IconButton.filledTonal(
+                    tooltip: 'Open Feature Demo',
+                    icon: const Icon(Icons.play_circle_outline, size: 20),
+                    onPressed: onOpenDemo,
+                  ),
+                  const SizedBox(width: 6),
                 ],
                 // Trigger Button
                 FilledButton.tonal(

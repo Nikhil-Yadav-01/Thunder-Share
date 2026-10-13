@@ -4,6 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/permission/entities/app_permission.dart';
 import '../../../shared/utils/permission_helper.dart';
+import '../../features/audio/audio_recorder_demo_screen.dart';
+import '../../features/camera/camera_demo_screen.dart';
+import '../../features/files/files_demo_screen.dart';
+import '../../features/gallery/gallery_demo_screen.dart';
+import '../../features/location/location_demo_screen.dart';
+import '../../features/playground_hub_screen.dart';
+import '../../features/system/app_details_demo_screen.dart';
 import '../controllers/permission_controller.dart';
 import '../widgets/permission_card.dart';
 
@@ -329,6 +336,41 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
     }
   }
 
+  void _openDemoForPermission(AppPermissionType type) {
+    Widget screen;
+    switch (type) {
+      case AppPermissionType.camera:
+        screen = const CameraDemoScreen();
+        break;
+      case AppPermissionType.microphone:
+        screen = const AudioRecorderDemoScreen();
+        break;
+      case AppPermissionType.location:
+        screen = const LocationDemoScreen();
+        break;
+      case AppPermissionType.photos:
+      case AppPermissionType.videos:
+      case AppPermissionType.mediaLibrary:
+      case AppPermissionType.audio:
+        screen = const GalleryDemoScreen();
+        break;
+      case AppPermissionType.storage:
+      case AppPermissionType.manageExternalStorage:
+        screen = const FilesDemoScreen();
+        break;
+      case AppPermissionType.appTrackingTransparency:
+      case AppPermissionType.systemAlertWindow:
+      case AppPermissionType.requestInstallPackages:
+      case AppPermissionType.notification:
+        screen = const AppDetailsDemoScreen();
+        break;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => screen),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(permissionControllerProvider);
@@ -338,6 +380,17 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
       appBar: AppBar(
         title: const Text('Permission Manager'),
         actions: [
+          IconButton(
+            tooltip: 'Feature Playground',
+            icon: const Icon(Icons.explore_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const PlaygroundHubScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'App Settings',
             icon: const Icon(Icons.settings),
@@ -382,6 +435,7 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
                   isRequesting: isRequestingThis,
                   onRequest: () => _handlePermissionRequest(type),
                   onCheckStatus: () => controller.checkStatus(type),
+                  onOpenDemo: () => _openDemoForPermission(type),
                 );
               },
             ),

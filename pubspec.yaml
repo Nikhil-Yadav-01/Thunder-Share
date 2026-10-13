@@ -36,6 +36,12 @@ dependencies:
   cupertino_icons: ^1.0.8
   permission_handler: ^12.0.1
   flutter_riverpod: ^3.3.2
+  image_picker: ^1.2.1
+  record: ^6.2.1
+  audioplayers: ^6.6.0
+  geolocator: ^14.0.2
+  path_provider: ^2.1.5
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:
