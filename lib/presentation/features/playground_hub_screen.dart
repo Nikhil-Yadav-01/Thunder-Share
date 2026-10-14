@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/permission/entities/app_permission.dart';
 import '../permission/controllers/permission_controller.dart';
+import 'apps/pages/device_apps_sharing_screen.dart';
 import 'audio/audio_recorder_demo_screen.dart';
 import 'camera/camera_demo_screen.dart';
 import 'files/files_demo_screen.dart';
@@ -76,6 +77,14 @@ class PlaygroundHubScreen extends ConsumerWidget {
         color: Colors.teal,
         permissionType: AppPermissionType.location,
         screenBuilder: () => const LocationDemoScreen(),
+      ),
+      PlaygroundItem(
+        title: 'Device Apps & Sharing Hub',
+        subtitle: 'Browse installed apps, inspect APK specs & permissions, share APKs like a sharing app.',
+        icon: Icons.share_outlined,
+        color: Colors.deepPurple,
+        permissionType: AppPermissionType.storage,
+        screenBuilder: () => const DeviceAppsSharingScreen(),
       ),
       PlaygroundItem(
         title: 'App Details & System Tools',

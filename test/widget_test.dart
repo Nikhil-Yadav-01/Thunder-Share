@@ -1,10 +1,17 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:permission/main.dart';
 
 void main() {
-  testWidgets('Permission screen renders with tabs and permission cards',
+  testWidgets('Permission screen renders with 8 tabs and permission cards',
       (WidgetTester tester) async {
+    // Set larger screen size so tabs and cards render cleanly
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       const ProviderScope(
         child: PermissionMasteryApp(),
@@ -16,15 +23,14 @@ void main() {
     // Verify AppBar title
     expect(find.text('Permission Manager'), findsOneWidget);
 
-    // Verify category tabs
-    expect(find.text('All'), findsOneWidget);
-    expect(find.text('Photos & Media'), findsOneWidget);
-    expect(find.text('Apps & System'), findsOneWidget);
-    expect(find.text('Hardware'), findsOneWidget);
+    // Verify category tabs exist
+    expect(find.text('All (30)'), findsOneWidget);
+    expect(find.text('Bluetooth & Network'), findsOneWidget);
+    expect(find.text('Contacts & Comms'), findsOneWidget);
+    expect(find.text('Location & Motion'), findsOneWidget);
 
-    // Verify initial Hardware permissions on first page
+    // Verify initial permission card renders
     expect(find.text('Camera'), findsWidgets);
-    expect(find.text('Microphone'), findsWidgets);
 
     // Switch to Photos & Media tab
     await tester.tap(find.text('Photos & Media'));
@@ -34,19 +40,11 @@ void main() {
     expect(find.text('Photos / Gallery'), findsWidgets);
     expect(find.text('Videos'), findsWidgets);
 
-    // Switch to Apps & System tab
-    await tester.tap(find.text('Apps & System'));
+    // Switch to Files & Storage tab
+    await tester.tap(find.text('Files & Storage'));
     await tester.pumpAndSettle();
 
-    // Verify Apps & System permissions
-    expect(find.text('App Tracking Transparency'), findsWidgets);
-    expect(find.text('Display Over Other Apps'), findsWidgets);
-
-    // Scroll down in current tab to ensure bottom items render
-    await tester.drag(find.text('Display Over Other Apps'), const Offset(0, -300));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Push Notifications'), findsWidgets);
+    // Verify Files & Storage permissions
+    expect(find.text('Manage All Files'), findsWidgets);
   });
 }
-

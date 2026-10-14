@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/permission/entities/app_permission.dart';
 import '../../../shared/utils/permission_helper.dart';
+import '../../features/apps/pages/device_apps_sharing_screen.dart';
 import '../../features/audio/audio_recorder_demo_screen.dart';
 import '../../features/camera/camera_demo_screen.dart';
 import '../../features/files/files_demo_screen.dart';
@@ -29,7 +30,7 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 8, vsync: this);
 
     // Initial load
     Future.microtask(() {
@@ -59,6 +60,46 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
     if (!type.isSupportedOnPlatform(defaultTargetPlatform, isWeb: kIsWeb)) {
       _showUnsupportedDialog(type);
       return;
+    }
+
+    // Multi-Step check for Background Location
+    if (type == AppPermissionType.locationAlways) {
+      final isForegroundGranted = ref
+          .read(permissionControllerProvider)
+          .isGranted(AppPermissionType.location);
+
+      if (!isForegroundGranted) {
+        _showMultiStepDialog(
+          stepNumber: 1,
+          title: 'Step 1 of 2: Foreground Location Required',
+          message:
+              'Mobile operating systems (Android 11+ and iOS) require granting "While using the app" location before background access can be requested.\n\n'
+              'Let\'s request Foreground Location first.',
+          actionLabel: 'Grant Foreground Location',
+          onAction: () => _handlePermissionRequest(AppPermissionType.location),
+        );
+        return;
+      }
+    }
+
+    // Multi-Step check for Background Body Sensors
+    if (type == AppPermissionType.sensorsAlways) {
+      final isSensorsGranted = ref
+          .read(permissionControllerProvider)
+          .isGranted(AppPermissionType.sensors);
+
+      if (!isSensorsGranted) {
+        _showMultiStepDialog(
+          stepNumber: 1,
+          title: 'Step 1 of 2: Body Sensors Required',
+          message:
+              'Body sensor access must be granted while in foreground before background collection can be enabled.\n\n'
+              'Let\'s request Body Sensors first.',
+          actionLabel: 'Grant Body Sensors',
+          onAction: () => _handlePermissionRequest(AppPermissionType.sensors),
+        );
+        return;
+      }
     }
 
     final status = await ref
@@ -155,7 +196,8 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
   Future<void> _showUnsupportedDialog(AppPermissionType type) async {
     if (!mounted) return;
 
-    final explanation = type.unsupportedExplanation(defaultTargetPlatform) ??
+    final explanation =
+        type.unsupportedExplanation(defaultTargetPlatform) ??
         '${type.displayName} is not supported on this platform.';
 
     await showDialog<void>(
@@ -177,6 +219,41 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
           ],
         );
       },
+    );
+  }
+
+  Future<void> _showMultiStepDialog({
+    required int stepNumber,
+    required String title,
+    required String message,
+    required String actionLabel,
+    required VoidCallback onAction,
+  }) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(
+          Icons.linear_scale_outlined,
+          size: 36,
+          color: Colors.indigo,
+        ),
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              onAction();
+            },
+            child: Text(actionLabel),
+          ),
+        ],
+      ),
     );
   }
 
@@ -231,7 +308,8 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
   Future<void> _showRationaleDialog(AppPermissionType type) async {
     if (!mounted) return;
 
-    final isStorageOnAndroid = type == AppPermissionType.storage &&
+    final isStorageOnAndroid =
+        type == AppPermissionType.storage &&
         defaultTargetPlatform == TargetPlatform.android;
 
     await showDialog<void>(
@@ -247,9 +325,9 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
           content: Text(
             isStorageOnAndroid
                 ? 'On modern Android versions (Android 13+), broad external storage access is deprecated. '
-                  'The OS may reject this request in favor of Granular Media permissions (Photos, Videos, Audio) '
-                  'or Manage All Files access.\n\n'
-                  'Would you like to try requesting this anyway?'
+                      'The OS may reject this request in favor of Granular Media permissions (Photos, Videos, Audio) '
+                      'or Manage All Files access.\n\n'
+                      'Would you like to try requesting this anyway?'
                 : '${type.description}\n\nPlease allow this permission to use all features seamlessly.',
           ),
           actions: [
@@ -318,17 +396,33 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
 
   List<AppPermissionType> _filterPermissions(int tabIndex) {
     switch (tabIndex) {
-      case 1: // Photos & Media
+      case 1: // Bluetooth & Network
+        return AppPermissionType.values
+            .where((t) => t.category == AppPermissionCategory.connectivity)
+            .toList();
+      case 2: // Contacts & Comms
+        return AppPermissionType.values
+            .where((t) => t.category == AppPermissionCategory.communication)
+            .toList();
+      case 3: // Location & Motion
+        return AppPermissionType.values
+            .where((t) => t.category == AppPermissionCategory.location)
+            .toList();
+      case 4: // Photos & Media
         return AppPermissionType.values
             .where((t) => t.category == AppPermissionCategory.media)
             .toList();
-      case 2: // Apps & System
+      case 5: // Files & Storage
         return AppPermissionType.values
-            .where((t) => t.category == AppPermissionCategory.system)
+            .where((t) => t.category == AppPermissionCategory.storage)
             .toList();
-      case 3: // Hardware
+      case 6: // Device & Sensors
         return AppPermissionType.values
             .where((t) => t.category == AppPermissionCategory.hardware)
+            .toList();
+      case 7: // Apps & System
+        return AppPermissionType.values
+            .where((t) => t.category == AppPermissionCategory.system)
             .toList();
       case 0: // All
       default:
@@ -346,29 +440,26 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
         screen = const AudioRecorderDemoScreen();
         break;
       case AppPermissionType.location:
+      case AppPermissionType.locationAlways:
         screen = const LocationDemoScreen();
         break;
       case AppPermissionType.photos:
       case AppPermissionType.videos:
       case AppPermissionType.mediaLibrary:
       case AppPermissionType.audio:
+      case AppPermissionType.accessMediaLocation:
         screen = const GalleryDemoScreen();
         break;
       case AppPermissionType.storage:
       case AppPermissionType.manageExternalStorage:
         screen = const FilesDemoScreen();
         break;
-      case AppPermissionType.appTrackingTransparency:
-      case AppPermissionType.systemAlertWindow:
-      case AppPermissionType.requestInstallPackages:
-      case AppPermissionType.notification:
+      default:
         screen = const AppDetailsDemoScreen();
         break;
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => screen),
-    );
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   @override
@@ -381,13 +472,20 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
         title: const Text('Permission Manager'),
         actions: [
           IconButton(
+            tooltip: 'Device Apps & Sharing',
+            icon: const Icon(Icons.share_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DeviceAppsSharingScreen()),
+              );
+            },
+          ),
+          IconButton(
             tooltip: 'Feature Playground',
             icon: const Icon(Icons.explore_outlined),
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const PlaygroundHubScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const PlaygroundHubScreen()),
               );
             },
           ),
@@ -406,16 +504,41 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen>
           controller: _tabController,
           isScrollable: true,
           tabs: const [
-            Tab(text: 'All'),
-            Tab(icon: Icon(Icons.perm_media_outlined, size: 18), text: 'Photos & Media'),
-            Tab(icon: Icon(Icons.apps_outlined, size: 18), text: 'Apps & System'),
-            Tab(icon: Icon(Icons.devices_outlined, size: 18), text: 'Hardware'),
+            Tab(text: 'All (30)'),
+            Tab(
+              icon: Icon(Icons.bluetooth, size: 18),
+              text: 'Bluetooth & Network',
+            ),
+            Tab(
+              icon: Icon(Icons.contacts_outlined, size: 18),
+              text: 'Contacts & Comms',
+            ),
+            Tab(
+              icon: Icon(Icons.location_on_outlined, size: 18),
+              text: 'Location & Motion',
+            ),
+            Tab(
+              icon: Icon(Icons.perm_media_outlined, size: 18),
+              text: 'Photos & Media',
+            ),
+            Tab(
+              icon: Icon(Icons.folder_outlined, size: 18),
+              text: 'Files & Storage',
+            ),
+            Tab(
+              icon: Icon(Icons.devices_outlined, size: 18),
+              text: 'Device & Sensors',
+            ),
+            Tab(
+              icon: Icon(Icons.apps_outlined, size: 18),
+              text: 'Apps & System',
+            ),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: List.generate(4, (index) {
+        children: List.generate(8, (index) {
           final items = _filterPermissions(index);
           return RefreshIndicator(
             onRefresh: controller.loadStatuses,

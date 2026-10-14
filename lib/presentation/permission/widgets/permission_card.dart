@@ -110,6 +110,42 @@ class PermissionCard extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: permissionType.requestArchetype ==
+                                      PermissionRequestArchetype.settingsRedirect
+                                  ? Colors.deepOrange.withValues(alpha: 0.12)
+                                  : permissionType.requestArchetype ==
+                                          PermissionRequestArchetype.multiStep
+                                      ? Colors.indigo.withValues(alpha: 0.12)
+                                      : Colors.teal.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              permissionType.requestArchetype ==
+                                      PermissionRequestArchetype.settingsRedirect
+                                  ? 'Settings Intent'
+                                  : permissionType.requestArchetype ==
+                                          PermissionRequestArchetype.multiStep
+                                      ? '2-Step Multi'
+                                      : 'System Modal',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: permissionType.requestArchetype ==
+                                        PermissionRequestArchetype.settingsRedirect
+                                    ? Colors.deepOrange
+                                    : permissionType.requestArchetype ==
+                                            PermissionRequestArchetype.multiStep
+                                        ? Colors.indigo
+                                        : Colors.teal,
+                              ),
+                            ),
+                          ),
                           if (permissionType.platformTag != null)
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -216,7 +252,10 @@ class PermissionCard extends StatelessWidget {
                               ? 'Recheck'
                               : status == AppPermissionStatus.notApplicable
                                   ? 'Info'
-                                  : 'Request',
+                                  : permissionType.requestArchetype ==
+                                          PermissionRequestArchetype.settingsRedirect
+                                      ? 'Configure'
+                                      : 'Request',
                         ),
                 ),
               ],

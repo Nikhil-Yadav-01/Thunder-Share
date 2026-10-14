@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../../domain/permission/entities/app_permission.dart';
-import '../../permission/controllers/permission_controller.dart';
-
 class RealFileItem {
   final String path;
   final String name;

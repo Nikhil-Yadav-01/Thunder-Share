@@ -6,6 +6,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../domain/permission/entities/app_permission.dart';
 import '../../permission/controllers/permission_controller.dart';
+import '../apps/pages/device_apps_sharing_screen.dart';
 
 class AppDetailsDemoScreen extends ConsumerStatefulWidget {
   const AppDetailsDemoScreen({super.key});
@@ -195,7 +196,37 @@ class _AppDetailsDemoScreenState extends ConsumerState<AppDetailsDemoScreen> {
               'Interactive System Features',
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
+            // Device Apps Sharing & APK Explorer Card
+            Card(
+              elevation: 0,
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+              ),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: theme.colorScheme.primary,
+                  child: const Icon(Icons.share, color: Colors.white),
+                ),
+                title: const Text(
+                  'Device Apps & Sharing Hub',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text('Inspect all apps, permissions & share APKs'),
+                trailing: FilledButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const DeviceAppsSharingScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
 
             // Notification Trigger Card
             Card(
