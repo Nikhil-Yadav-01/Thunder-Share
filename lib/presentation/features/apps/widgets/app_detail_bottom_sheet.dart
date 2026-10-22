@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../domain/apps/entities/device_app_info.dart';
+import '../../hotspot/widgets/hotspot_share_modal.dart';
 import '../controllers/device_apps_controller.dart';
 
 class AppDetailBottomSheet extends ConsumerStatefulWidget {
@@ -287,6 +288,24 @@ class _AppDetailBottomSheetState extends ConsumerState<AppDetailBottomSheet> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  FilledButton.tonalIcon(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(44),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () {
+                      HotspotShareModal.show(
+                        context,
+                        apps: [widget.app],
+                        appIcons: state.appIcons,
+                      );
+                    },
+                    icon: const Icon(Icons.wifi_tethering, size: 18),
+                    label: const Text('Share via Offline Hotspot (No Internet)'),
                   ),
 
                   const SizedBox(height: 20),

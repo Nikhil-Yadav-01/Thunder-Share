@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/permission/entities/app_permission.dart';
 import '../permission/controllers/permission_controller.dart';
 import 'apps/pages/device_apps_sharing_screen.dart';
+import 'hotspot/pages/hotspot_receiver_screen.dart';
 import 'audio/audio_recorder_demo_screen.dart';
 import 'camera/camera_demo_screen.dart';
 import 'files/files_demo_screen.dart';
@@ -85,6 +86,14 @@ class PlaygroundHubScreen extends ConsumerWidget {
         color: Colors.deepPurple,
         permissionType: AppPermissionType.storage,
         screenBuilder: () => const DeviceAppsSharingScreen(),
+      ),
+      PlaygroundItem(
+        title: 'Offline Wi-Fi Hotspot Sharing',
+        subtitle: 'Connect to sender hotspot to receive APKs & files at 80 MB/s without internet.',
+        icon: Icons.wifi_tethering,
+        color: Colors.teal,
+        permissionType: AppPermissionType.nearbyWifiDevices,
+        screenBuilder: () => const HotspotReceiverScreen(),
       ),
       PlaygroundItem(
         title: 'App Details & System Tools',

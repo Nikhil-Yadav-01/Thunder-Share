@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../domain/apps/entities/device_app_info.dart';
+import '../../hotspot/pages/hotspot_receiver_screen.dart';
+import '../../hotspot/widgets/hotspot_share_modal.dart';
 import '../controllers/device_apps_controller.dart';
 import '../widgets/app_detail_bottom_sheet.dart';
 
@@ -95,6 +97,15 @@ class _DeviceAppsSharingScreenState extends ConsumerState<DeviceAppsSharingScree
                 ),
               );
             }).toList(),
+          ),
+          IconButton(
+            tooltip: 'Receive via Hotspot',
+            icon: const Icon(Icons.wifi_find_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const HotspotReceiverScreen()),
+              );
+            },
           ),
           IconButton(
             tooltip: 'Refresh apps',
@@ -299,13 +310,32 @@ class _DeviceAppsSharingScreenState extends ConsumerState<DeviceAppsSharingScree
                     const SizedBox(width: 8),
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        HotspotShareModal.show(
+                          context,
+                          apps: state.selectedApps,
+                          appIcons: state.appIcons,
+                        );
+                      },
+                      icon: const Icon(Icons.wifi_tethering, size: 16),
+                      label: const Text('Hotspot'),
+                    ),
+                    const SizedBox(width: 6),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       onPressed: notifier.shareSelectedApks,
                       icon: const Icon(Icons.share, size: 16),
-                      label: const Text('Share APKs'),
+                      label: const Text('Share'),
                     ),
                   ],
                 ),
