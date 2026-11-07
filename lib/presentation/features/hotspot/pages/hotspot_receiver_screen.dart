@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -65,6 +66,15 @@ class _HotspotReceiverScreenState extends State<HotspotReceiverScreen> {
       _isConnecting = true;
       _errorMessage = null;
     });
+
+    if (kIsWeb) {
+      setState(() {
+        _isConnecting = false;
+        _errorMessage =
+            'On Web, navigate directly to http://${_ipController.text} in your browser to download files with native browser download management.';
+      });
+      return;
+    }
 
     try {
       final host = _ipController.text.trim();
@@ -196,11 +206,11 @@ class _HotspotReceiverScreenState extends State<HotspotReceiverScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text('1. Connect to the sender\'s Wi-Fi Hotspot on this phone.'),
+                    const Text('1. Connect to the same Wi-Fi network or sender\'s Hotspot on this device.'),
                     const SizedBox(height: 4),
                     const Text('2. Tap "Connect to Sender" below to load the shared APKs.'),
                     const SizedBox(height: 4),
-                    const Text('3. Download files directly at 30–80 MB/s offline!'),
+                    const Text('3. Download files directly at 30–80 MB/s offline without internet!'),
                   ],
                 ),
               ),

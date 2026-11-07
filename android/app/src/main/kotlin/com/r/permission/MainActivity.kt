@@ -1,5 +1,6 @@
 package com.r.permission
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -16,6 +17,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import androidx.annotation.NonNull
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -146,6 +148,19 @@ class MainActivity : FlutterActivity() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             result.error("UNSUPPORTED", "Android 8.0+ required", null)
             return
+        }
+
+        // Verify runtime permissions before invoking WifiManager API
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED) {
+                result.error("PERMISSION_DENIED", "Nearby Wi-Fi Devices permission is required to start the hotspot.", null)
+                return
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                result.error("PERMISSION_DENIED", "Fine Location permission is required to start the hotspot on this Android version.", null)
+                return
+            }
         }
 
         try {

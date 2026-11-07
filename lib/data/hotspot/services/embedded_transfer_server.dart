@@ -3,31 +3,53 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../../../domain/apps/entities/device_app_info.dart';
+import '../../../domain/sharing/entities/share_payload.dart';
 
 class EmbeddedTransferServer {
   HttpServer? _server;
-  List<DeviceAppInfo> _hostedApps = [];
+  List<SharePayload> _hostedPayloads = [];
   Map<String, Uint8List> _appIcons = {};
   int _downloadCount = 0;
 
   int get port => _server?.port ?? 8080;
   bool get isRunning => _server != null;
   int get downloadCount => _downloadCount;
+  List<SharePayload> get hostedPayloads => _hostedPayloads;
 
+  /// Starts the embedded HTTP server.
+  /// On Web, runs in safe simulation preview without attempting socket binding.
   Future<int> start({
-    required List<DeviceAppInfo> apps,
+    List<DeviceAppInfo> apps = const [],
+    List<SharePayload>? payloads,
     Map<String, Uint8List> appIcons = const {},
     int port = 8080,
   }) async {
     await stop();
-    _hostedApps = apps;
+
+    // Map apps to extensible SharePayloads if payloads not explicitly provided
+    if (payloads != null) {
+      _hostedPayloads = payloads;
+    } else {
+      _hostedPayloads = apps
+          .map((app) => AppSharePayload(
+                appInfo: app,
+                iconBytes: appIcons[app.packageName],
+              ))
+          .toList();
+    }
+
     _appIcons = appIcons;
     _downloadCount = 0;
+
+    // Web browsers cannot bind raw TCP listening sockets
+    if (kIsWeb) {
+      return port;
+    }
 
     try {
       _server = await HttpServer.bind(InternetAddress.anyIPv4, port);
     } catch (e) {
-      // If 8080 is busy, bind to any available ephemeral port
+      // If preferred port is busy, bind to any available ephemeral port
       _server = await HttpServer.bind(InternetAddress.anyIPv4, 0);
     }
 
@@ -39,11 +61,16 @@ class EmbeddedTransferServer {
   }
 
   Future<void> stop() async {
+    if (kIsWeb) {
+      _hostedPayloads = [];
+      _appIcons = {};
+      return;
+    }
     try {
       await _server?.close(force: true);
     } catch (_) {}
     _server = null;
-    _hostedApps = [];
+    _hostedPayloads = [];
     _appIcons = {};
   }
 
@@ -65,11 +92,15 @@ class EmbeddedTransferServer {
     try {
       if (path == '/' || path == '/index.html') {
         _serveWebPortal(response);
-      } else if (path == '/api/apps') {
-        _serveAppsJson(response);
+      } else if (path == '/api/apps' || path == '/api/files') {
+        _servePayloadsJson(response);
+      } else if (path == '/api/ping') {
+        response.headers.contentType = ContentType.json;
+        response.write(jsonEncode({'status': 'ok', 'count': _hostedPayloads.length}));
+        await response.close();
       } else if (path.startsWith('/download/')) {
-        final pkg = path.replaceFirst('/download/', '');
-        await _serveApkDownload(pkg, response);
+        final id = path.replaceFirst('/download/', '');
+        await _serveDownload(id, response);
       } else if (path.startsWith('/icon/')) {
         final pkg = path.replaceFirst('/icon/', '');
         _serveIcon(pkg, response);
@@ -88,32 +119,41 @@ class EmbeddedTransferServer {
     }
   }
 
-  void _serveAppsJson(HttpResponse response) {
+  void _servePayloadsJson(HttpResponse response) {
     response.headers.contentType = ContentType.json;
-    final list = _hostedApps.map((a) => {
-      'name': a.name,
-      'packageName': a.packageName,
-      'versionName': a.versionName,
-      'versionCode': a.versionCode,
-      'sizeBytes': a.apkSizeBytes,
-      'sizeFormatted': a.formattedSize,
-      'downloadUrl': '/download/${a.packageName}',
-      'iconUrl': '/icon/${a.packageName}',
-    }).toList();
+    final list = _hostedPayloads.map((p) => p.toJson()).toList();
     response.write(jsonEncode(list));
     response.close();
   }
 
-  Future<void> _serveApkDownload(String packageName, HttpResponse response) async {
-    final app = _hostedApps.firstWhere(
-      (a) => a.packageName == packageName,
-      orElse: () => throw Exception('App not found: $packageName'),
+  Future<void> _serveDownload(String id, HttpResponse response) async {
+    final payload = _hostedPayloads.firstWhere(
+      (p) => p.id == id,
+      orElse: () => throw Exception('Item not found: $id'),
     );
 
-    final file = File(app.apkFilePath);
+    String? filePath;
+    String downloadFileName = '${payload.name}.apk';
+
+    if (payload is AppSharePayload) {
+      filePath = payload.apkFilePath;
+      downloadFileName = '${payload.name.replaceAll(' ', '_')}.apk';
+    } else if (payload is FileSharePayload) {
+      filePath = payload.localPath;
+      downloadFileName = payload.name;
+    }
+
+    if (filePath == null) {
+      response.statusCode = HttpStatus.notFound;
+      response.write('File path not available');
+      await response.close();
+      return;
+    }
+
+    final file = File(filePath);
     if (!file.existsSync()) {
       response.statusCode = HttpStatus.notFound;
-      response.write('APK file not found on host storage');
+      response.write('File not found on host storage: $filePath');
       await response.close();
       return;
     }
@@ -124,12 +164,12 @@ class EmbeddedTransferServer {
     response.statusCode = HttpStatus.ok;
     response.headers.set(
       HttpHeaders.contentTypeHeader,
-      'application/vnd.android.package-archive',
+      payload.mimeType,
     );
     response.headers.set(HttpHeaders.contentLengthHeader, length.toString());
     response.headers.set(
       'Content-Disposition',
-      'attachment; filename="${app.name.replaceAll(' ', '_')}.apk"',
+      'attachment; filename="$downloadFileName"',
     );
 
     await response.addStream(file.openRead());
@@ -152,18 +192,22 @@ class EmbeddedTransferServer {
   void _serveWebPortal(HttpResponse response) {
     response.headers.contentType = ContentType.html;
 
-    final rowsHtml = _hostedApps.map((app) {
+    final rowsHtml = _hostedPayloads.map((payload) {
+      final subtitle = payload is AppSharePayload
+          ? '${payload.packageName} • v${payload.versionName}'
+          : payload.mimeType;
+
       return '''
       <div class="card">
         <div class="icon-wrap">
-          <img src="/icon/${app.packageName}" alt="${app.name}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' fill=\\'%236200ee\\'><path d=\\'M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z\\'/></svg>'"/>
+          <img src="/icon/${payload.id}" alt="${payload.name}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' fill=\\'%236200ee\\'><path d=\\'M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z\\'/></svg>'"/>
         </div>
         <div class="meta">
-          <div class="title">${app.name}</div>
-          <div class="subtitle">${app.packageName} • v${app.versionName}</div>
-          <div class="badge">${app.formattedSize}</div>
+          <div class="title">${payload.name}</div>
+          <div class="subtitle">$subtitle</div>
+          <div class="badge">${payload.formattedSize}</div>
         </div>
-        <a class="btn-download" href="/download/${app.packageName}" download>
+        <a class="btn-download" href="/download/${payload.id}" download>
           Download APK
         </a>
       </div>
@@ -199,17 +243,17 @@ class EmbeddedTransferServer {
 <body>
   <div class="header">
     <h1>⚡ DirectShare Portal</h1>
-    <p>High-speed offline file transfer via direct Wi-Fi Hotspot</p>
+    <p>High-speed offline file transfer via local Wi-Fi / Hotspot</p>
   </div>
   <div class="summary">
-    <span>Ready to transfer: <strong>${_hostedApps.length} Apps</strong></span>
+    <span>Ready to transfer: <strong>${_hostedPayloads.length} Items</strong></span>
     <span>No internet needed</span>
   </div>
   <div class="apps-list">
     $rowsHtml
   </div>
   <div class="footer">
-    Connected to sender hotspot • Download directly to this device
+    Connected to sender • Download directly to this device
   </div>
 </body>
 </html>
